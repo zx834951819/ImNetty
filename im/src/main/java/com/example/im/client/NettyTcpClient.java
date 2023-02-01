@@ -4,13 +4,14 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.demo.vip.netty.client.handler.NettyClientHandler;
-import com.demo.vip.netty.client.listener.MessageStateListener;
-import com.demo.vip.netty.client.listener.NettyClientListener;
-import com.demo.vip.netty.client.status.ConnectState;
-import com.demo.vip.netty.client.uitl.SmartCarDecoder;
-import com.demo.vip.netty.client.uitl.SmartCarEncoder;
-import com.demo.vip.netty.client.uitl.SmartCarProtocol;
+
+import com.example.im.client.handler.NettyClientHandler;
+import com.example.im.client.listener.MessageStateListener;
+import com.example.im.client.listener.NettyClientListener;
+import com.example.im.client.status.ConnectState;
+import com.example.im.client.uitl.SmartCarDecoder;
+import com.example.im.client.uitl.SmartCarEncoder;
+import com.example.im.client.uitl.SmartCarProtocol;
 
 import java.util.concurrent.TimeUnit;
 

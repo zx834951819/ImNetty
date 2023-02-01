@@ -3,9 +3,9 @@ package com.example.im.client.handler;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.demo.vip.netty.client.listener.NettyClientListener;
-import com.demo.vip.netty.client.status.ConnectState;
-import com.demo.vip.netty.client.uitl.SmartCarProtocol;
+import com.example.im.client.listener.NettyClientListener;
+import com.example.im.client.status.ConnectState;
+import com.example.im.client.uitl.SmartCarProtocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -13,6 +13,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+
 
 /**
  * @author zzxy
