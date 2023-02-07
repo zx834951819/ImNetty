@@ -1,10 +1,17 @@
 package com.example.im.client;
 
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 
+import com.example.im.BuildConfig;
 import com.example.im.client.handler.NettyClientHandler;
 import com.example.im.client.listener.MessageStateListener;
 import com.example.im.client.listener.NettyClientListener;
@@ -12,7 +19,11 @@ import com.example.im.client.status.ConnectState;
 import com.example.im.client.uitl.SmartCarDecoder;
 import com.example.im.client.uitl.SmartCarEncoder;
 import com.example.im.client.uitl.SmartCarProtocol;
+import com.zhy.http.okhttp.OkHttpUtils;
+import com.zhy.http.okhttp.callback.Callback;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.Bootstrap;
@@ -27,6 +38,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import okhttp3.Call;
+import okhttp3.Response;
 
 /**
  * @author zzxy
@@ -119,7 +132,70 @@ public class NettyTcpClient {
         return isSendheartBeat;
     }
 
-    public void connect() {
+    public void connect(Context context) {
+        String PackageName = getPackageName(context);
+        if (PackageName != null && !TextUtils.isEmpty(PackageName)) {
+            verifySignature(context, PackageName);
+        } else {
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    connect(context);
+                }
+            },1000);
+
+        }
+    }
+
+    private void verifySignature(Context context, String PackageName) {
+        String SignatureStr = getRawSignatureStr(context, PackageName);
+        if (SignatureStr != null && !TextUtils.isEmpty(SignatureStr)) {
+            verifyId(context);
+        } else {
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    verifySignature(context, PackageName);
+                }
+            },1000);
+
+        }
+    }
+
+    private void verifyId(Context context) {
+        OkHttpUtils.post()
+                .tag(this)
+                .url(BuildConfig.hostAddress + ":8800/")
+                .addParams("", "")
+                .build().execute(new Callback() {
+            @Override
+            public Object parseNetworkResponse(Response response, int id) throws Exception {
+                return response;
+            }
+
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        verifyId(context);
+                    }
+                },1000);
+
+            }
+
+            @Override
+            public void onResponse(Object response, int id) {
+                if (true) {
+                    verifyConnect();
+                } else {
+                    Toast.makeText(context, "当前应用已过期", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+    }
+
+    private void verifyConnect() {
         if (isConnecting) {
             return;
         }
@@ -133,6 +209,69 @@ public class NettyTcpClient {
             }
         };
         clientThread.start();
+    }
+
+    private String getPackageName(Context context) {
+        PackageManager manager = context.getPackageManager();
+        PackageInfo info;
+        try {
+            info = manager.getPackageInfo(context.getPackageName(), 0);
+            Log.d("TAG", "自身包名为：" + info);
+            return info + "";
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public String getRawSignatureStr(Context context, String packageName) {
+        try {
+            Signature[] signs = getRawSignature(context, packageName);
+            String signValidString = getSignValidString(signs[0].toByteArray());
+            return signValidString;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Signature[] getRawSignature(Context context, String packageName) {
+        if (packageName == null || packageName.length() == 0) {
+            return null;
+        }
+        try {
+            PackageInfo info = context.getPackageManager().getPackageInfo(packageName, PackageManager.GET_SIGNATURES);
+            if (info != null) {
+                return info.signatures;
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private String getSignValidString(byte[] paramArrayOfByte) throws NoSuchAlgorithmException {
+        MessageDigest localMessageDigest = MessageDigest.getInstance("MD5");
+        localMessageDigest.update(paramArrayOfByte);
+        return toHexString(localMessageDigest.digest());
+    }
+
+    private String toHexString(byte[] paramArrayOfByte) {
+        if (paramArrayOfByte == null) {
+            return null;
+        }
+        StringBuilder localStringBuilder = new StringBuilder(2 * paramArrayOfByte.length);
+        for (int i = 0; ; i++) {
+            if (i >= paramArrayOfByte.length) {
+                return localStringBuilder.toString();
+            }
+            String str = Integer.toString(0xFF & paramArrayOfByte[i], 16);
+            if (str.length() == 1) {
+                str = "0" + str;
+            }
+            localStringBuilder.append(str);
+        }
     }
 
 
@@ -206,7 +345,7 @@ public class NettyTcpClient {
         group.shutdownGracefully();
     }
 
-    public void reconnect() {
+    private void reconnect() {
         Log.e(TAG, "reconnect");
         if (isNeedReconnect && reconnectNum > 0 && !isConnect) {
             reconnectNum--;
@@ -268,7 +407,7 @@ public class NettyTcpClient {
     public boolean sendMsgToServer(byte[] data, final MessageStateListener listener) {
         boolean flag = channel != null && isConnect;
         if (flag) {
-            SmartCarProtocol protocol=new SmartCarProtocol(data.length,data);
+            SmartCarProtocol protocol = new SmartCarProtocol(data.length, data);
             channel.writeAndFlush(protocol).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {

@@ -13,8 +13,13 @@ android {
     }
 
     buildTypes {
+        debug{
+            buildConfigField "String", "hostAddress", "\"http://192.168.31.131\""//内网
+            minifyEnabled false//混淆
+        }
         release {
-            minifyEnabled false
+            buildConfigField "String", "hostAddress", "\"http://192.168.31.131\""//内网
+            minifyEnabled false//混淆
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -33,4 +38,8 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     // netty im聊天系统
     implementation 'io.netty:netty-all:5.0.0.Alpha2'
+    //zhy ok http utils
+    //https://github.com/hongyangAndroid/okhttputils
+    implementation 'com.zhy:okhttputils:2.6.2'
+    implementation 'com.squareup.okhttp3:okhttp:3.14.9'
 }
